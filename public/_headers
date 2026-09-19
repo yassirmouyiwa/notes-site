@@ -1,0 +1,8 @@
+# En-têtes HTTP appliqués par Cloudflare Pages à toutes les pages.
+# Tout est servi depuis le site lui-même : CSP stricte, aucun script tiers.
+/*
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
