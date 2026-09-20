@@ -3,8 +3,7 @@
 Mes notes en Markdown, publiées automatiquement en site statique.
 
 ```
-notes/ma-note.md  ──./publier.sh──▶  build.py ──▶  dist/  ──wrangler──▶  Cloudflare Pages
-                                    └──▶  git push (archivage des sources)
+notes/ma-note.md  ──git push──▶  GitHub  ──▶  Cloudflare Pages lance build.py  ──▶  site en ligne
 ```
 
 ## Publier une note
@@ -13,16 +12,10 @@ notes/ma-note.md  ──./publier.sh──▶  build.py ──▶  dist/  ──
 ./publier.sh ~/Downloads/ma-note.md
 ```
 
-Le script copie le fichier dans `notes/`, construit le site, archive les sources dans Git,
-puis envoie `dist/` à Cloudflare (~10 s au total).
+Le script copie le fichier dans `notes/`, vérifie que le site se construit, commit et push.
+Cloudflare détecte le push, relance `build.py` et met le site à jour en une minute environ.
 
-⚠️ Le push GitHub **ne publie rien** : le projet Pages « notes-site » est en upload direct, il
-n'est pas relié au dépôt. C'est `wrangler` qui met le site en ligne. Publier à la main :
-
-```bash
-cp ma-note.md notes/ && .venv/bin/python build.py
-wrangler pages deploy dist --project-name=notes-site --branch=main
-```
+Équivalent à la main : déposer le `.md` dans `notes/`, puis `git add`, `git commit`, `git push`.
 
 ## Écrire une note
 
@@ -73,18 +66,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # une seule
 
 ## Configuration Cloudflare Pages
 
-Projet `notes-site` → https://notes-site-a6b.pages.dev/ — **upload direct**, pas de build côté
-Cloudflare. La mise en ligne se fait depuis cette machine :
-
-```bash
-wrangler pages deploy dist --project-name=notes-site --branch=main   # fait par ./publier.sh
-```
-
-Node est installé sans root dans `~/.local/opt/node` (ajouté au PATH par `~/.bashrc.d/node.sh`),
-wrangler dans `~/.local/bin`. Les identifiants OAuth sont dans `~/.config/.wrangler/`.
-
-Pour repasser à une build automatique côté Cloudflare (dashboard → Settings → Builds &
-deployments → Connect to Git), les réglages seraient :
+Projet **`notes-site-git`** → https://notes-site-git.pages.dev/ — relié à ce dépôt, Cloudflare
+construit à chaque push sur `main`.
 
 | Réglage | Valeur |
 |---|---|
@@ -92,3 +75,13 @@ deployments → Connect to Git), les réglages seraient :
 | Build command | `pip install -r requirements.txt && python build.py` |
 | Build output directory | `dist` |
 | Production branch | `main` |
+
+L'ancien projet `notes-site` (→ `notes-site-a6b.pages.dev`) était en **upload direct** : un tel
+projet ne peut pas être relié à Git après coup, d'où la création de `notes-site-git`.
+
+Déploiement manuel possible en secours (wrangler est installé dans `~/.local/bin`, Node sans
+root dans `~/.local/opt/node`) :
+
+```bash
+wrangler pages deploy dist --project-name=notes-site-git --branch=main
+```
