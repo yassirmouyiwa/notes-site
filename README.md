@@ -79,10 +79,13 @@ mais **les webhooks GitHub → Cloudflare n'arrivent plus sur ce compte** : aucu
 déclenche de build, ni ici ni sur le blog (resté figé du 15/09 au 20/09 sans que ça se voie).
 Si l'intégration est réparée un jour, il suffira de supprimer le workflow.
 
-Déploiement manuel en secours (wrangler est dans `~/.local/bin`, Node sans root dans
-`~/.local/opt/node`) :
+Relancer une publication sans rien modifier (par exemple après un échec) :
 
 ```bash
-CLOUDFLARE_API_TOKEN=$(cat ~/.cf-token) \
-  wrangler pages deploy dist --project-name=notes-perso --branch=main
+gh workflow run deploy.yml --repo yassirmouyiwa/notes-site
+gh run list --repo yassirmouyiwa/notes-site --limit 3
 ```
+
+Aucun identifiant Cloudflare n'est stocké sur la machine : seuls les secrets du dépôt servent
+au déploiement. Pour publier depuis un poste, il faut créer un jeton *Cloudflare Pages — Edit*
+et lancer `wrangler pages deploy dist --project-name=notes-perso --branch=main`.
