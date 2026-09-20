@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Publie des notes : copie les .md dans notes/, vérifie le build, commit et push.
-# Cloudflare Pages (projet « notes-site-git », relié à ce dépôt) détecte le push,
+# Cloudflare Pages (projet « notes-perso », relié à ce dépôt) détecte le push,
 # relance build.py et met le site en ligne (~1 min).
 #
 #   ./publier.sh ~/Downloads/ma-note.md [autre.md …]   ajoute / remplace des notes
@@ -32,4 +32,4 @@ else
 fi
 git commit -q -m "$msg"
 git push -q
-echo "Poussé : « $msg ». Cloudflare construit le site : https://notes-site-git.pages.dev/"
+echo "Poussé : « $msg ». Cloudflare construit le site : https://notes-perso.pages.dev/"

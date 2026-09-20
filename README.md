@@ -66,7 +66,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # une seule
 
 ## Configuration Cloudflare Pages
 
-Projet **`notes-site-git`** → https://notes-site-git.pages.dev/ — relié à ce dépôt, Cloudflare
+Projet **`notes-perso`** → https://notes-perso.pages.dev/ — relié à ce dépôt, Cloudflare
 construit à chaque push sur `main`.
 
 | Réglage | Valeur |
@@ -76,12 +76,13 @@ construit à chaque push sur `main`.
 | Build output directory | `dist` |
 | Production branch | `main` |
 
-L'ancien projet `notes-site` (→ `notes-site-a6b.pages.dev`) était en **upload direct** : un tel
-projet ne peut pas être relié à Git après coup, d'où la création de `notes-site-git`.
+⚠️ Un projet Pages créé en **upload direct** ne peut pas être relié à Git après coup : il faut
+créer un nouveau projet (Create → Pages → Connect to Git). C'est pour ça que le premier projet,
+`notes-site` (→ `notes-site-a6b.pages.dev`), a été remplacé par `notes-perso`.
 
 Déploiement manuel possible en secours (wrangler est installé dans `~/.local/bin`, Node sans
 root dans `~/.local/opt/node`) :
 
 ```bash
-wrangler pages deploy dist --project-name=notes-site-git --branch=main
+wrangler pages deploy dist --project-name=notes-perso --branch=main
 ```
