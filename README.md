@@ -3,7 +3,7 @@
 Mes notes en Markdown, publiées automatiquement en site statique.
 
 ```
-notes/ma-note.md  ──git push──▶  GitHub  ──▶  Cloudflare Pages lance build.py  ──▶  site en ligne
+notes/ma-note.md  ──git push──▶  GitHub Actions lance build.py  ──wrangler──▶  Cloudflare Pages
 ```
 
 ## Publier une note
@@ -13,7 +13,7 @@ notes/ma-note.md  ──git push──▶  GitHub  ──▶  Cloudflare Pages l
 ```
 
 Le script copie le fichier dans `notes/`, vérifie que le site se construit, commit et push.
-Cloudflare détecte le push, relance `build.py` et met le site à jour en une minute environ.
+GitHub Actions reconstruit et publie le site en une minute environ.
 
 Équivalent à la main : déposer le `.md` dans `notes/`, puis `git add`, `git commit`, `git push`.
 
@@ -64,25 +64,25 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # une seule
 | `public/` | copié tel quel dans le site : CSS, JS, favicon, `_headers` (en-têtes de sécurité) |
 | `dist/` | le site généré (non versionné, envoyé tel quel à Cloudflare) |
 
-## Configuration Cloudflare Pages
+## Publication
 
-Projet **`notes-perso`** → https://notes-perso.pages.dev/ — relié à ce dépôt, Cloudflare
-construit à chaque push sur `main`.
+Le site est déployé par **GitHub Actions** (`.github/workflows/deploy.yml`) : à chaque push sur
+`main`, le workflow installe `requirements.txt`, lance `build.py` et envoie `dist/` au projet
+Pages **`notes-perso`** → https://notes-perso.pages.dev/
 
-| Réglage | Valeur |
-|---|---|
-| Framework preset | None |
-| Build command | `pip install -r requirements.txt && python build.py` |
-| Build output directory | `dist` |
-| Production branch | `main` |
+Secrets du dépôt (déjà configurés) : `CLOUDFLARE_API_TOKEN` (portée *Cloudflare Pages — Edit*)
+et `CLOUDFLARE_ACCOUNT_ID`.
 
-⚠️ Un projet Pages créé en **upload direct** ne peut pas être relié à Git après coup : il faut
-créer un nouveau projet (Create → Pages → Connect to Git). C'est pour ça que le premier projet,
-`notes-site` (→ `notes-site-a6b.pages.dev`), a été remplacé par `notes-perso`.
+⚠️ Pourquoi pas la build automatique de Cloudflare ? Elle est pourtant configurée sur
+`notes-perso` (preset None, `pip install -r requirements.txt && python build.py`, sortie `dist`),
+mais **les webhooks GitHub → Cloudflare n'arrivent plus sur ce compte** : aucun push ne
+déclenche de build, ni ici ni sur le blog (resté figé du 15/09 au 20/09 sans que ça se voie).
+Si l'intégration est réparée un jour, il suffira de supprimer le workflow.
 
-Déploiement manuel possible en secours (wrangler est installé dans `~/.local/bin`, Node sans
-root dans `~/.local/opt/node`) :
+Déploiement manuel en secours (wrangler est dans `~/.local/bin`, Node sans root dans
+`~/.local/opt/node`) :
 
 ```bash
-wrangler pages deploy dist --project-name=notes-perso --branch=main
+CLOUDFLARE_API_TOKEN=$(cat ~/.cf-token) \
+  wrangler pages deploy dist --project-name=notes-perso --branch=main
 ```
