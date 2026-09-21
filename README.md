@@ -1,9 +1,9 @@
 # notes-site
 
-Mes notes en Markdown, publiées automatiquement en site statique.
+Des notes en Markdown, un site statique en ligne.
 
 ```
-notes/ma-note.md  ──git push──▶  GitHub Actions lance build.py  ──wrangler──▶  Cloudflare Pages
+notes/ma-note.md  ──git push──▶  GitHub Actions lance build.py  ──▶  https://notes-perso.pages.dev
 ```
 
 ## Publier une note
@@ -12,22 +12,24 @@ notes/ma-note.md  ──git push──▶  GitHub Actions lance build.py  ──
 ./publier.sh ~/Downloads/ma-note.md
 ```
 
-Le script copie le fichier dans `notes/`, vérifie que le site se construit, commit et push.
-GitHub Actions reconstruit et publie le site en une minute environ.
+Le script copie le fichier dans `notes/`, vérifie que le site se construit, commit et
+pousse. En ligne une minute plus tard.
 
-Équivalent à la main : déposer le `.md` dans `notes/`, puis `git add`, `git commit`, `git push`.
+À la main, c'est pareil : déposer le `.md` dans `notes/`, puis `git add`, `commit`, `push`.
 
 ## Écrire une note
 
-Un fichier `.md` normal suffit. Le site en tire tout seul :
+Un `.md` ordinaire suffit. Le site en déduit tout seul :
 
-- **le titre** : le premier `# Titre` du fichier ;
-- **le résumé** (page d'accueil) : le premier paragraphe ou la première citation `>` ;
-- **l'adresse** : le nom du fichier (`notes/xss-dom.md` → `/xss-dom`) ;
-- **la date** : celle du dernier commit du fichier ;
-- **le sommaire** : les titres `##` et `###`.
+| | d'où ça vient |
+|---|---|
+| le titre | le premier `# Titre` |
+| le résumé en page d'accueil | le premier paragraphe, ou la première citation `>` |
+| l'adresse | le chemin du fichier — `notes/xss-dom.md` → `/xss-dom`, `notes/devsecops/03-cicd.md` → `/devsecops/03-cicd` |
+| la date | le dernier commit du fichier |
+| le sommaire | les titres `##` et `###` |
 
-Un en-tête optionnel en haut du fichier force ces valeurs :
+Un en-tête optionnel force ces valeurs :
 
 ```markdown
 ---
@@ -39,14 +41,14 @@ draft: true
 ---
 ```
 
-`draft: true` garde la note hors du site. Les fichiers qui commencent par `_` sont ignorés.
+`draft: true` garde la note hors du site. Les fichiers commençant par `_` sont ignorés.
 
-Ce qui est pris en charge : tableaux, blocs de code colorés (` ```php `, ` ```js `, ` ```bash `…),
-cases à cocher `- [ ]`, notes de bas de page `[^1]`, liens entre notes (`[voir](autre-note.md)`),
-images (`![](img/capture.png)` avec l'image placée dans `notes/img/`).
+Pris en charge : tableaux, blocs de code colorés (` ```php `, ` ```js `, ` ```bash `…),
+cases à cocher `- [ ]`, notes de bas de page `[^1]`, liens entre notes
+(`[voir](autre-note.md)`), images (`![](img/capture.png)`, fichier dans `notes/img/`).
 
-Le HTML brut écrit dans une note est **affiché, jamais exécuté**. Un payload `<script>` écrit
-hors d'un bloc de code reste donc du texte.
+**Le HTML brut est affiché, jamais exécuté.** Un `<script>` écrit hors d'un bloc de code
+reste du texte à l'écran — indispensable quand les notes contiennent des payloads.
 
 ## Aperçu local
 
@@ -59,33 +61,22 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # une seule
 
 | Chemin | Rôle |
 |---|---|
-| `notes/` | les notes `.md` (et leurs images) |
+| `notes/` | les notes `.md` et leurs images ; les sous-dossiers deviennent des sous-adresses |
 | `build.py` | le générateur : Markdown → HTML dans `dist/` |
-| `public/` | copié tel quel dans le site : CSS, JS, favicon, `_headers` (en-têtes de sécurité) |
-| `dist/` | le site généré (non versionné, envoyé tel quel à Cloudflare) |
+| `public/` | copié tel quel à la racine du site : CSS, JS, favicon, `_headers` |
+| `dist/` | le site généré — non versionné, envoyé tel quel à Cloudflare |
 
-## Publication
+## Déploiement
 
-Le site est déployé par **GitHub Actions** (`.github/workflows/deploy.yml`) : à chaque push sur
-`main`, le workflow installe `requirements.txt`, lance `build.py` et envoie `dist/` au projet
-Pages **`notes-perso`** → https://notes-perso.pages.dev/
-
-Secrets du dépôt (déjà configurés) : `CLOUDFLARE_API_TOKEN` (portée *Cloudflare Pages — Edit*)
-et `CLOUDFLARE_ACCOUNT_ID`.
-
-⚠️ Pourquoi pas la build automatique de Cloudflare ? Elle est pourtant configurée sur
-`notes-perso` (preset None, `pip install -r requirements.txt && python build.py`, sortie `dist`),
-mais **les webhooks GitHub → Cloudflare n'arrivent plus sur ce compte** : aucun push ne
-déclenche de build, ni ici ni sur le blog (resté figé du 15/09 au 20/09 sans que ça se voie).
-Si l'intégration est réparée un jour, il suffira de supprimer le workflow.
-
-Relancer une publication sans rien modifier (par exemple après un échec) :
+À chaque push sur `main`, GitHub Actions installe `requirements.txt`, lance `build.py` et
+envoie `dist/` au projet Cloudflare Pages **`notes-perso`**.
 
 ```bash
-gh workflow run deploy.yml --repo yassirmouyiwa/notes-site
-gh run list --repo yassirmouyiwa/notes-site --limit 3
+gh run list --repo yassirmouyiwa/notes-site --limit 3        # ça a marché ?
+gh workflow run deploy.yml --repo yassirmouyiwa/notes-site   # republier sans rien changer
 ```
 
-Aucun identifiant Cloudflare n'est stocké sur la machine : seuls les secrets du dépôt servent
-au déploiement. Pour publier depuis un poste, il faut créer un jeton *Cloudflare Pages — Edit*
-et lancer `wrangler pages deploy dist --project-name=notes-perso --branch=main`.
+Secrets du dépôt : `CLOUDFLARE_API_TOKEN` (portée *Cloudflare Pages — Edit*) et
+`CLOUDFLARE_ACCOUNT_ID`. Aucun identifiant Cloudflare n'est stocké sur la machine : pour
+publier depuis un poste, créer un jeton et lancer
+`wrangler pages deploy dist --project-name=notes-perso --branch=main`.
