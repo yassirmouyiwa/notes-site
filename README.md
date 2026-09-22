@@ -6,16 +6,24 @@ Des notes en Markdown, un site statique en ligne.
 notes/ma-note.md  ──git push──▶  GitHub Actions lance build.py  ──▶  https://notes-perso.pages.dev
 ```
 
-## Publier une note
+## Publier, retirer
 
 ```bash
-./publier.sh ~/Downloads/ma-note.md
+./publier.sh ~/Downloads/ma-note.md            # une note (ou plusieurs à la suite)
+./publier.sh ~/Downloads/devsecops/            # un dossier entier → /devsecops/…
+./publier.sh --supprimer ma-note.md            # retirer une note du site
+./publier.sh --supprimer devsecops             # retirer tout un dossier
 ```
 
-Le script copie le fichier dans `notes/`, vérifie que le site se construit, commit et
-pousse. En ligne une minute plus tard.
+Le script copie (ou supprime) dans `notes/`, vérifie que le site se construit, commit et
+pousse. En ligne une minute plus tard. Republier un dossier existant remplace ses notes par
+les nouvelles versions ; pour en retirer une, c'est `--supprimer devsecops/03-cicd.md`.
 
-À la main, c'est pareil : déposer le `.md` dans `notes/`, puis `git add`, `commit`, `push`.
+Avant de retirer une note, le script signale les autres notes qui pointent encore vers
+elle — le lien resterait mort sur le site.
+
+À la main, c'est pareil : modifier ou supprimer dans `notes/`, puis `./publier.sh` sans
+argument, qui publie tout ce qui a changé.
 
 ## Écrire une note
 
