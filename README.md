@@ -58,6 +58,20 @@ cases à cocher `- [ ]`, notes de bas de page `[^1]`, liens entre notes
 **Le HTML brut est affiché, jamais exécuté.** Un `<script>` écrit hors d'un bloc de code
 reste du texte à l'écran — indispensable quand les notes contiennent des payloads.
 
+## Dossiers et rubriques
+
+Un sous-dossier de `notes/` devient une rubrique. `/devsecops/` liste toutes ses notes et
+ses sous-dossiers, sans que tu aies rien à écrire — une note ajoutée dans le dossier
+apparaît toute seule.
+
+Si le dossier contient un **`index.md`** ou un **`README.md`**, cette note devient la page
+du dossier : son titre donne le nom de la rubrique, et son contenu s'affiche au-dessus de
+la liste. Sans ça, la rubrique porte le nom du dossier.
+
+L'accueil, lui, ne déroule plus tout : il montre les **dossiers** d'un côté, les **notes
+isolées** de l'autre. La recherche continue de couvrir l'ensemble — taper le titre d'un
+module fait remonter son dossier — et chaque page de dossier a sa propre recherche.
+
 ## Aperçu local
 
 ```bash

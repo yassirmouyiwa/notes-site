@@ -22,6 +22,10 @@ permet de forcer ces valeurs :
 
 Les fichiers dont le nom commence par « _ » sont ignorés. Les autres fichiers de notes/
 (images…) sont copiés tels quels, donc ![](img/capture.png) fonctionne.
+
+Un sous-dossier de notes/ devient une rubrique : /mon-dossier/ liste ses notes et ses
+sous-dossiers. Si le dossier contient un « index.md » ou un « README.md », son contenu
+s'affiche en tête de cette page et son titre devient celui de la rubrique.
 """
 
 import html
@@ -129,13 +133,16 @@ def plain_text(inline):
 
 
 def rewrite_md_link(href):
-    """[autre note](autre.md#section)  ->  autre#section"""
+    """[autre note](autre.md#section) -> autre#section ; [le dossier](x/index.md) -> x/"""
     if re.match(r"^[a-z][a-z0-9+.-]*:", href, re.I) or href.startswith("#"):
         return href
     path, sep, frag = href.partition("#")
     if path.endswith(".md"):
         head, _, stem = path[:-3].rpartition("/")
-        path = (head + "/" if head else "") + slugify(stem)
+        if stem.lower() in ("index", "readme"):
+            path = head + "/" if head else "./"      # la page d'accueil du dossier
+        else:
+            path = (head + "/" if head else "") + slugify(stem)
     return path + sep + frag
 
 
@@ -226,12 +233,21 @@ def load_note(path):
 
     tags = [t.strip().strip("\"'") for t in meta.get("tags", "").strip("[]").split(",") if t.strip()]
     rel = path.relative_to(NOTES)
-    url = "/" + (rel.parent.as_posix() + "/" if rel.parent != Path(".") else "") + slugify(path.stem)
+    folder = rel.parent
+    # « index.md » ou « README.md » dans un dossier : c'est la page du dossier, servie
+    # à /dossier/, avec le sommaire du dossier ajouté sous son contenu.
+    landing = folder != Path(".") and path.stem.lower() in ("index", "readme")
+    if landing:
+        url = "/" + folder.as_posix() + "/"
+    else:
+        url = "/" + (folder.as_posix() + "/" if folder != Path(".") else "") + slugify(path.stem)
     words = len(re.findall(r"\w+", body))
 
     return {
         "source": path,
         "url": url,
+        "folder": folder,
+        "landing": landing,
         "title": title,
         "title_html": MD.renderInline(title),
         "description": truncate(meta.get("description") or summary),
@@ -328,38 +344,89 @@ def note_page(note):
     return page(note["title"], note["description"], body, "is-note")
 
 
-def index_page(notes):
-    items = []
-    for n in notes:
-        search = strip_accents(" ".join([n["title"], n["description"], *n["tags"]])).lower()
-        tags = f'<div class="tags">{tags_html(n["tags"])}</div>' if n["tags"] else ""
-        items.append(f"""<li data-search="{esc(search)}">
-  <a class="card" href="{esc(n["url"])}">
-    <h2>{n["title_html"]}</h2>
-    <p>{esc(n["description"])}</p>
-    <p class="meta">{meta_line(n)}</p>
+def card(url, title_html, description, meta, tags="", search=""):
+    desc = f"<p>{esc(description)}</p>" if description else ""
+    tags_block = f'<div class="tags">{tags}</div>' if tags else ""
+    return f"""<li data-search="{esc(search)}">
+  <a class="card" href="{esc(url)}">
+    <h2>{title_html}</h2>
+    {desc}
+    <p class="meta">{meta}</p>
   </a>
-  {tags}
-</li>""")
-    count = f'{len(notes)} note{"s" if len(notes) > 1 else ""}'
+  {tags_block}
+</li>"""
+
+
+def note_card(note):
+    search = strip_accents(" ".join([note["title"], note["description"], *note["tags"]])).lower()
+    return card(note["url"], note["title_html"], note["description"],
+                meta_line(note), tags_html(note["tags"]), search)
+
+
+def folder_card(folder):
+    n = folder["total"]
+    meta = f'<span class="badge">dossier</span> {n} note{"s" if n > 1 else ""}'
+    return card(folder["url"], esc(folder["title"]), folder["description"], meta,
+                search=strip_accents(folder["search"]).lower())
+
+
+def section(title, cards):
+    return f"""  <h2 class="section-title">{esc(title)}</h2>
+  <ol class="note-list">
+{cards}
+  </ol>
+"""
+
+
+def toolbar(entries):
+    label = f'{entries} entrée{"s" if entries > 1 else ""}'
+    return f"""<div class="toolbar">
+    <label class="search">
+      <span class="visually-hidden">Rechercher</span>
+      <input id="search" type="search" placeholder="Rechercher…" autocomplete="off">
+    </label>
+    <span id="count" class="count" data-total="{entries}" data-label="entrée">{label}</span>
+  </div>"""
+
+
+def index_page(folders, notes):
+    corps = ""
+    if folders:
+        corps += section(f"Dossiers ({len(folders)})", "".join(folder_card(f) for f in folders))
+    if notes:
+        corps += section(f"Notes ({len(notes)})", "".join(note_card(n) for n in notes))
     body = f"""<main id="contenu" class="wrap home">
   <section class="hero">
     <h1>{esc(SITE_TITLE)}</h1>
     <p>{esc(SITE_TAGLINE)}</p>
   </section>
-  <div class="toolbar">
-    <label class="search">
-      <span class="visually-hidden">Rechercher</span>
-      <input id="search" type="search" placeholder="Rechercher une note…" autocomplete="off">
-    </label>
-    <span id="count" class="count" data-total="{len(notes)}">{count}</span>
-  </div>
-  <ol class="note-list">
-{"".join(items)}
-  </ol>
-  <p id="empty" class="empty" hidden>Aucune note ne correspond.</p>
+  {toolbar(len(folders) + len(notes))}
+{corps}  <p id="empty" class="empty" hidden>Aucune note ne correspond.</p>
 </main>"""
     return page(SITE_TITLE, SITE_TAGLINE, body, "is-home")
+
+
+def folder_page(folder):
+    intro = f'<div class="prose">\n{folder["content"]}\n  </div>' if folder["content"] else ""
+    corps = ""
+    if folder["subdirs"]:
+        corps += section(f"Sous-dossiers ({len(folder['subdirs'])})",
+                         "".join(folder_card(f) for f in folder["subdirs"]))
+    if folder["notes"]:
+        corps += section(f"Notes ({len(folder['notes'])})",
+                         "".join(note_card(n) for n in folder["notes"]))
+    description = folder["description"] or f'{folder["total"]} notes dans cette rubrique.'
+    body = f"""<main id="contenu" class="wrap home">
+  <section class="hero">
+    <a class="back" href="{esc(folder["parent_url"])}">← {esc(folder["parent_label"])}</a>
+    <h1>{esc(folder["title"])}</h1>
+    {"" if folder["content"] else f'<p>{esc(description)}</p>'}
+  </section>
+  {intro}
+  {toolbar(len(folder["subdirs"]) + len(folder["notes"]))}
+{corps}  <p id="empty" class="empty" hidden>Aucune note ne correspond.</p>
+</main>"""
+    return page(folder["title"], description, body, "is-home")
 
 
 def not_found_page():
@@ -375,6 +442,62 @@ def not_found_page():
 # ---------------------------------------------------------------------------
 # Construction
 # ---------------------------------------------------------------------------
+
+def pretty_name(name):
+    label = name.replace("-", " ").replace("_", " ").strip()
+    return label[:1].upper() + label[1:]
+
+
+def group_folders(notes):
+    """Reconstruit l'arborescence des dossiers de notes/ à partir des notes chargées."""
+    folders = {}
+
+    def ensure(path):
+        if path not in folders:
+            folders[path] = {
+                "path": path,
+                "url": "/" + path.as_posix() + "/",
+                "title": pretty_name(path.name),
+                "description": "",
+                "content": "",
+                "notes": [],
+                "subdirs": [],
+                "parent_url": "/",
+                "parent_label": "Toutes les notes",
+            }
+            if len(path.parts) > 1:
+                ensure(path.parent)["subdirs"].append(folders[path])
+        return folders[path]
+
+    for note in notes:
+        if note["folder"] == Path("."):
+            continue
+        folder = ensure(note["folder"])
+        if note["landing"]:                # index.md / README.md : en-tête du dossier
+            folder["title"] = note["title"]
+            folder["description"] = note["description"]
+            folder["content"] = note["content"]
+        else:
+            folder["notes"].append(note)
+
+    # Du plus profond vers la racine : tri, compte des notes, texte pour la recherche
+    for path in sorted(folders, key=lambda p: len(p.parts), reverse=True):
+        folder = folders[path]
+        folder["notes"].sort(key=lambda n: n["source"].name)
+        folder["subdirs"].sort(key=lambda s: s["path"].name)
+        folder["total"] = len(folder["notes"]) + sum(s["total"] for s in folder["subdirs"])
+        folder["search"] = " ".join([folder["title"], folder["description"]]
+                                    + [n["title"] for n in folder["notes"]]
+                                    + [t for n in folder["notes"] for t in n["tags"]]
+                                    + [s["search"] for s in folder["subdirs"]])
+
+    for path, folder in folders.items():   # le titre du parent n'est connu qu'à la fin
+        if len(path.parts) > 1:
+            parent = folders[path.parent]
+            folder["parent_url"], folder["parent_label"] = parent["url"], parent["title"]
+
+    return folders
+
 
 def build():
     if DIST.exists():
@@ -396,6 +519,8 @@ def build():
         note = load_note(path)
         if note is None:
             continue
+        if note["url"] in ("/index", "/404"):
+            sys.exit(f"{rel} : nom réservé, il écraserait l'accueil ou la page 404.")
         if note["url"] in seen:
             sys.exit(f"Deux notes donnent la même adresse {note['url']} : {seen[note['url']]} et {rel}")
         seen[note["url"]] = rel
@@ -403,15 +528,28 @@ def build():
 
     notes.sort(key=lambda n: (n["date"], n["title"].lower()), reverse=True)
     for note in notes:
+        if note["landing"]:
+            continue                       # sa page, c'est celle du dossier
         out = DIST / (note["url"].lstrip("/") + ".html")
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(note_page(note), encoding="utf-8")
 
-    (DIST / "index.html").write_text(index_page(notes), encoding="utf-8")
+    folders = group_folders(notes)
+    for folder in folders.values():
+        out = DIST / folder["path"].as_posix() / "index.html"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(folder_page(folder), encoding="utf-8")
+
+    racine = [folders[p] for p in sorted(folders) if len(p.parts) == 1]
+    libres = [n for n in notes if n["folder"] == Path(".")]
+    (DIST / "index.html").write_text(index_page(racine, libres), encoding="utf-8")
     (DIST / "404.html").write_text(not_found_page(), encoding="utf-8")
 
-    print(f"{len(notes)} note(s) -> {DIST.relative_to(ROOT)}/")
-    for note in notes:
+    print(f"{len(notes)} note(s), {len(folders)} dossier(s) -> {DIST.relative_to(ROOT)}/")
+    for path in sorted(folders):
+        folder = folders[path]
+        print(f"  {folder['url']:<40} {folder['title']} ({folder['total']} notes)")
+    for note in libres:
         print(f"  {note['url']:<40} {note['title']}")
 
 

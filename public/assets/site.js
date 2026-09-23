@@ -35,9 +35,10 @@ if (search) {
       item.hidden = !match;
       if (match) shown++;
     }
+    const label = count.dataset.label || "note";
     count.textContent = terms.length
       ? `${shown} / ${total}`
-      : `${total} note${total > 1 ? "s" : ""}`;
+      : `${total} ${label}${total > 1 ? "s" : ""}`;
     empty.hidden = shown > 0;
   };
 

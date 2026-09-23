@@ -125,6 +125,16 @@ a:hover { text-decoration-thickness: 2px; }
 .search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .count { color: var(--muted); font-size: 0.88rem; white-space: nowrap; }
 
+.section-title {
+  font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.09em;
+  color: var(--muted); font-weight: 600; margin: 2.2rem 0 0.9rem;
+}
+.section-title:first-of-type { margin-top: 0; }
+.badge {
+  display: inline-block; padding: 1px 7px; margin-right: 6px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
+}
 .note-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
 .note-list li {
   background: var(--surface);
