@@ -1,0 +1,63 @@
+# =====================================================================
+#  docker-compose.yml — Lab PostgreSQL mono-instance (alternative Docker)
+#  Formation DBA PostgreSQL
+#
+#  Alternative au lab natif (module 00) si tu préfères Docker.
+#  Démarrer :  docker compose up -d
+#  Se connecter :  docker compose exec db psql -U postgres -d banque
+#  Charger le jeu de données :
+#     docker compose exec -T db psql -U postgres -d banque < ../sql/01_jeu_de_donnees_banque.sql
+#  Arrêter (en conservant les données) :  docker compose stop
+#  Tout supprimer (y compris les données) :  docker compose down -v
+#
+#  NOTE : pour les TP de réplication (module 08) et de haute disponibilité,
+#  le lab natif reste préférable ; ce compose couvre les modules 01 à 07, 09, 10.
+# =====================================================================
+
+services:
+  db:
+    image: postgres:17
+    container_name: formation-dba-pg
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: motdepasse_lab      # lab uniquement — à ne jamais réutiliser
+      POSTGRES_DB: banque
+      # Options d'initialisation : forcer SCRAM dès la création
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    command:
+      - "postgres"
+      - "-c"
+      - "password_encryption=scram-sha-256"
+      - "-c"
+      - "log_connections=on"
+      - "-c"
+      - "log_disconnections=on"
+      - "-c"
+      - "log_statement=ddl"
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+    ports:
+      - "127.0.0.1:5432:5432"                # n'exposer QUE sur localhost
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro   # scripts .sql/.sh joués à la 1re initialisation
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d banque"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Interface web d'administration (optionnelle, pratique pour explorer)
+  adminer:
+    image: adminer:latest
+    container_name: formation-dba-adminer
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
