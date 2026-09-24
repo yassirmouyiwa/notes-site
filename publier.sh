@@ -69,5 +69,5 @@ else
   msg="notes: mise à jour"
 fi
 git commit -q -m "$msg"
-git push -q
+git push -q -u origin HEAD
 echo "Poussé : « $msg ». GitHub Actions publie le site : https://notes-perso.pages.dev/"
